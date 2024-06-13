@@ -24,8 +24,13 @@ WASI_SWIFT_DIR = os.path.join(WASI_STORAGE_DIR, "swift")
 WASI_SWIFT_ENV_DIR = os.path.join(WASI_SWIFT_DIR, "env")
 # The dir where swiftenv lives
 WASI_SWIFTENV_DIR = os.path.join(WASI_SWIFT_DIR, "swiftenv")
+# Default sdk selected
+WASI_DEFAULT_SDK = os.path.join(WASI_SDKS_DIR, 'default-sdk')
 
 CURRENT_SDK = "11"
+
+if os.path.exists(WASI_DEFAULT_SDK):
+	with open(WASI_DEFAULT_SDK) as f: CURRENT_SDK = f.read()
 
 SDKS = {
     "5": {
@@ -70,11 +75,18 @@ SDKS = {
         },
         "sysroot": "wasi-sdk-11.0"
     },
+    "16": {
+        "download_urls": {
+            "darwin": 'https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-macos.tar.gz',
+            "linux": 'https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-linux.tar.gz',
+        },
+        "sysroot": "wasi-sdk-16.0"
+    },
 }
 
 SDK_TAGS = {
     "latest": "11",
-    "unstable": "11"
+    "unstable": "16"
 }
 
 SWIFTWASM = {
@@ -207,6 +219,12 @@ def download_and_unpack(sdk_name):
     if not os.path.isdir(sysroot):
         raise SDKException("The SDK expected sysroot doesn't exist: {}".format(sysroot))
     logger.info("SDK installed successfully")
+    if not os.path.exists(WASI_DEFAULT_SDK):
+        with open(WASI_DEFAULT_SDK, "w") as f:
+            f.write(sdk_name)
+            logger.info("Default SDK set to: {}".format(sdk_name))
+    else:
+        logger.info("Default SDK is: {}, use `wasienv default-sdk` to change it".format(CURRENT_SDK))
 
 
 def get_sdk_sysroot(sdk, sdk_name):
@@ -222,6 +240,8 @@ def set_default_sdk(sdk_name):
     sdk = get_sdk(sdk_name)
     if not is_sdk_installed(sdk_name):
         raise SDKNotInstalled("The SDK {} is not installed".format(sdk_name))
+    CURRENT_SDK = sdk_name
+    with open(WASI_DEFAULT_SDK, "w") as f: f.write(sdk_name)
 
 
 WASI_SDK = get_sdk(CURRENT_SDK)
